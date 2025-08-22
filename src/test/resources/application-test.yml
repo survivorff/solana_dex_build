@@ -1,0 +1,162 @@
+# 测试环境配置文件
+# 用于主网集成测试
+
+spring:
+  application:
+    name: solana-dex-service-test
+  
+  # 测试数据库配置（使用H2内存数据库）
+  datasource:
+    url: jdbc:h2:mem:testdb
+    username: sa
+    password: 
+    driver-class-name: org.h2.Driver
+  
+  # JPA配置
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+        format_sql: true
+  
+  # Redis配置（测试环境可选）
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      database: 1
+      timeout: 2000ms
+
+# Solana测试配置
+solana:
+  rpc:
+    # 主网RPC节点（用于真实测试）
+    mainnet-url: ${SOLANA_MAINNET_RPC:https://api.mainnet-beta.solana.com}
+    # 测试网RPC节点（用于安全测试）
+    devnet-url: ${SOLANA_DEVNET_RPC:https://api.devnet.solana.com}
+    timeout: 30000
+    max-retries: 3
+  
+  # DEX配置
+  dex:
+    pumpfun:
+      program-id: "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P"
+      fee-rate: 0.0025
+      min-amount: 1000
+      max-slippage: 10.0
+      rpc-timeout: 30000
+      max-retries: 3
+    pumpswap:
+      program-id: "9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin"
+      fee-rate: 0.003
+      min-amount: 500
+      max-slippage: 15.0
+      rpc-timeout: 30000
+      max-retries: 3
+    raydium:
+      program-id: "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8"
+      fee-rate: 0.0025
+      min-amount: 1000
+      max-slippage: 10.0
+      rpc-timeout: 30000
+      max-retries: 3
+
+# 测试配置
+test:
+  # 测试钱包配置
+  wallet:
+    # 测试钱包地址（请替换为实际的测试钱包）
+    address: ${TEST_WALLET_ADDRESS:9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM}
+    # 测试钱包私钥（Base58编码，仅用于测试）
+    private-key: ${TEST_WALLET_PRIVATE_KEY:}
+  
+  # 测试代币配置
+  tokens:
+    # USDC代币地址
+    usdc: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+    # USDT代币地址
+    usdt: "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB"
+    # SOL包装代币地址
+    wsol: "So11111111111111111111111111111111111111112"
+  
+  # 测试参数
+  parameters:
+    # 默认测试金额（最小单位）
+    default-amount: 1000000  # 1 USDC (6位小数)
+    # 默认滑点
+    default-slippage: 1.0    # 1%
+    # 测试超时时间（秒）
+    timeout-seconds: 60
+    # 最大重试次数
+    max-retries: 3
+  
+  # 网络配置
+  network:
+    # 是否使用主网进行测试（谨慎设置为true）
+    use-mainnet: ${USE_MAINNET_FOR_TEST:false}
+    # 是否启用实际上链测试（需要真实资金）
+    enable-onchain-test: ${ENABLE_ONCHAIN_TEST:false}
+    # RPC请求间隔（毫秒）
+    rpc-interval: 1000
+
+# 日志配置
+logging:
+  level:
+    com.solana.dex: DEBUG
+    software.sava: INFO
+    org.springframework.test: INFO
+  pattern:
+    console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+
+# 监控配置（测试环境禁用）
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+
+---
+# 主网测试专用配置
+spring:
+  config:
+    activate:
+      on-profile: mainnet-test
+
+test:
+  network:
+    use-mainnet: true
+    enable-onchain-test: false  # 安全起见，默认不启用实际上链
+
+logging:
+  level:
+    com.solana.dex: INFO
+    software.sava: WARN
+
+---
+# 开发测试配置
+spring:
+  config:
+    activate:
+      on-profile: dev-test
+
+solana:
+  rpc:
+    mainnet-url: https://api.devnet.solana.com  # 使用测试网
+
+test:
+  network:
+    use-mainnet: false
+    enable-onchain-test: true   # 测试网可以安全启用
+  parameters:
+    default-amount: 100000      # 更小的测试金额
+
+logging:
+  level:
+    com.solana.dex: DEBUG
+    software.sava: DEBUG

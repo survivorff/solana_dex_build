@@ -1,0 +1,133 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /
+
+spring:
+  application:
+    name: solana-dex-service
+  
+  # 数据库配置
+  datasource:
+    url: jdbc:postgresql://localhost:5432/solana_dex
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:password}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+  
+  # JPA配置
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+        use_sql_comments: true
+    open-in-view: false
+  
+  # Redis配置
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      database: 0
+      timeout: 2000ms
+      lettuce:
+        pool:
+          max-active: 20
+          max-idle: 10
+          min-idle: 5
+          max-wait: 2000ms
+  
+  # Jackson配置
+  jackson:
+    default-property-inclusion: non_null
+    time-zone: UTC
+    date-format: yyyy-MM-dd'T'HH:mm:ss.SSS'Z'
+
+# Solana配置
+solana:
+  rpc:
+    mainnet-url: ${SOLANA_MAINNET_RPC:https://api.mainnet-beta.solana.com}
+    devnet-url: ${SOLANA_DEVNET_RPC:https://api.devnet.solana.com}
+    timeout: 30000
+    max-retries: 3
+  
+  # DEX配置
+  dex:
+    pumpfun:
+      program-id: "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P"
+      fee-rate: 0.0025
+      min-amount: 1000
+    pumpswap:
+      program-id: "9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin"
+      fee-rate: 0.003
+      min-amount: 500
+    raydium:
+      program-id: "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8"
+      fee-rate: 0.0025
+      min-amount: 1000
+
+# API配置
+api:
+  rate-limit:
+    default: 1000
+    premium: 10000
+  cache:
+    transaction-ttl: 3600 # 1小时
+    status-ttl: 300 # 5分钟
+
+# 监控配置
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: when-authorized
+    metrics:
+      enabled: true
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+
+# 日志配置
+logging:
+  level:
+    com.solana.dex: INFO
+    org.springframework.web: INFO
+    org.hibernate.SQL: WARN
+    software.sava: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/solana-dex-service.log
+    max-size: 100MB
+    max-history: 30
+
+# OpenAPI文档配置
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+    tags-sorter: alpha
+  info:
+    title: Solana DEX Transaction Encoding Service API
+    description: API for encoding transactions on Solana DEX platforms
+    version: 1.0.0
+    contact:
+      name: Solana DEX Service Team
+      email: support@solanadex.com
