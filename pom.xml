@@ -21,8 +21,16 @@
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <sava.version>24.21.4</sava.version>
+        <sava.version>0.7.17</sava.version>
     </properties>
+
+    <repositories>
+        <repository>
+            <id>central</id>
+            <name>Maven Central</name>
+            <url>https://repo1.maven.org/maven2</url>
+        </repository>
+    </repositories>
 
     <dependencies>
         <!-- Spring Boot Starters -->
@@ -51,17 +59,17 @@
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
 
-        <!-- Sava库 - Solana官方推荐的Java客户端 -->
+        <!-- Solana Web3j库 - Java客户端 -->
         <dependency>
-            <groupId>software.sava</groupId>
-            <artifactId>sava-core</artifactId>
-            <version>${sava.version}</version>
+            <groupId>org.p2p</groupId>
+            <artifactId>solanaj</artifactId>
+            <version>1.17.0</version>
         </dependency>
         
         <dependency>
-            <groupId>software.sava</groupId>
-            <artifactId>sava-rpc</artifactId>
-            <version>${sava.version}</version>
+            <groupId>org.bitcoinj</groupId>
+            <artifactId>bitcoinj-core</artifactId>
+            <version>0.16.1</version>
         </dependency>
 
         <!-- 数据库相关 -->

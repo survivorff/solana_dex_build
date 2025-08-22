@@ -4,12 +4,9 @@ import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import software.sava.rpc.json.http.client.SolanaRpcClient;
-import software.sava.rpc.json.http.response.AccountInfo;
-import software.sava.core.accounts.PublicKey;
+import org.p2p.solanaj.rpc.RpcClient;
+import org.p2p.solanaj.core.PublicKey;
 
-import java.net.URI;
-import java.time.Duration;
 import java.util.Map;
 
 /**
@@ -51,30 +48,30 @@ public class SolanaConfig {
 
     /**
      * 创建主网RPC客户端
-     * @return SolanaRpcClient实例
+     * @return RpcClient实例
      */
     @Bean(name = "mainnetRpcClient")
-    public SolanaRpcClient mainnetRpcClient() {
+    public RpcClient mainnetRpcClient() {
         return createRpcClient(rpc.getMainnetUrl());
     }
 
     /**
      * 创建测试网RPC客户端
-     * @return SolanaRpcClient实例
+     * @return RpcClient实例
      */
     @Bean(name = "devnetRpcClient")
-    public SolanaRpcClient devnetRpcClient() {
+    public RpcClient devnetRpcClient() {
         return createRpcClient(rpc.getDevnetUrl());
     }
 
     /**
      * 创建RPC客户端
      * @param url RPC节点URL
-     * @return SolanaRpcClient实例
+     * @return RpcClient实例
      */
-    private SolanaRpcClient createRpcClient(String url) {
+    private RpcClient createRpcClient(String url) {
         try {
-            return SolanaRpcClient.createClient(URI.create(url));
+            return new RpcClient(url);
         } catch (Exception e) {
             throw new RuntimeException("Failed to create Solana RPC client for URL: " + url, e);
         }
@@ -100,7 +97,7 @@ public class SolanaConfig {
      */
     public PublicKey getDexProgramId(String dexName) {
         DexProperties config = getDexConfig(dexName);
-        return PublicKey.fromBase58(config.getProgramId());
+        return new PublicKey(config.getProgramId());
     }
 
     /**

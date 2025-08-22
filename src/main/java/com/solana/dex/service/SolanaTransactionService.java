@@ -4,17 +4,17 @@ import com.solana.dex.config.SolanaConfig;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import software.sava.core.accounts.PublicKey;
-import software.sava.core.tx.Instruction;
-import software.sava.core.tx.Transaction;
-import software.sava.rpc.json.http.client.SolanaRpcClient;
-import software.sava.rpc.json.http.response.AccountInfo;
-import software.sava.rpc.json.http.response.LatestBlockhash;
+import org.p2p.solanaj.core.PublicKey;
+import org.p2p.solanaj.core.TransactionInstruction;
+import org.p2p.solanaj.core.Transaction;
+import org.p2p.solanaj.rpc.RpcClient;
+import org.p2p.solanaj.rpc.types.AccountInfo;
 
 import java.math.BigInteger;
 import java.util.Base64;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.ArrayList;
 
 /**
  * Solana交易编码服务
@@ -25,8 +25,8 @@ import java.util.concurrent.CompletableFuture;
 @Slf4j
 public class SolanaTransactionService {
 
-    private final SolanaRpcClient mainnetRpcClient;
-    private final SolanaRpcClient devnetRpcClient;
+    private final RpcClient mainnetRpcClient;
+    private final RpcClient devnetRpcClient;
     private final SolanaConfig solanaConfig;
 
     /**
@@ -37,31 +37,34 @@ public class SolanaTransactionService {
      * @return 编码后的交易数据
      */
     public CompletableFuture<String> encodeTransaction(String walletAddress, 
-                                                     List<Instruction> instructions, 
+                                                     List<TransactionInstruction> instructions, 
                                                      boolean useMainnet) {
         return CompletableFuture.supplyAsync(() -> {
             try {
                 log.info("开始编码交易，钱包地址: {}, 指令数量: {}", walletAddress, instructions.size());
                 
                 // 选择RPC客户端
-                SolanaRpcClient rpcClient = useMainnet ? mainnetRpcClient : devnetRpcClient;
+                RpcClient rpcClient = useMainnet ? mainnetRpcClient : devnetRpcClient;
                 
                 // 获取最新区块哈希
-                LatestBlockhash latestBlockhash = rpcClient.getLatestBlockhash().join();
-                log.debug("获取到最新区块哈希: {}", latestBlockhash.blockhash());
+                String latestBlockhash = rpcClient.getApi().getLatestBlockhash();
+                log.debug("获取到最新区块哈希: {}", latestBlockhash);
                 
                 // 创建钱包公钥
-                PublicKey wallet = PublicKey.fromBase58(walletAddress);
+                PublicKey wallet = new PublicKey(walletAddress);
                 
                 // 构建交易
-                Transaction transaction = Transaction.createTx(
-                    wallet, // 费用支付者
-                    latestBlockhash.blockhash(), // 最新区块哈希
-                    instructions.toArray(new Instruction[0]) // 指令数组
-                );
+                Transaction transaction = new Transaction();
+                transaction.setRecentBlockHash(latestBlockhash);
+                transaction.setFeePayer(wallet);
+                
+                // 添加指令
+                for (TransactionInstruction instruction : instructions) {
+                    transaction.addInstruction(instruction);
+                }
                 
                 // 序列化交易
-                byte[] serializedTx = transaction.serialized();
+                byte[] serializedTx = transaction.serialize();
                 String encodedTx = Base64.getEncoder().encodeToString(serializedTx);
                 
                 log.info("交易编码完成，编码长度: {} bytes", serializedTx.length);
@@ -82,7 +85,7 @@ public class SolanaTransactionService {
      * @return 编码后的交易数据
      */
     public CompletableFuture<String> encodeTransaction(String walletAddress, 
-                                                     Instruction instruction, 
+                                                     TransactionInstruction instruction, 
                                                      boolean useMainnet) {
         return encodeTransaction(walletAddress, List.of(instruction), useMainnet);
     }
@@ -93,7 +96,7 @@ public class SolanaTransactionService {
      * @param useMainnet 是否使用主网
      * @return 预估费用（lamports）
      */
-    public CompletableFuture<Long> estimateTransactionFee(List<Instruction> instructions, boolean useMainnet) {
+    public CompletableFuture<Long> estimateTransactionFee(List<TransactionInstruction> instructions, boolean useMainnet) {
         return CompletableFuture.supplyAsync(() -> {
             try {
                 // 基础交易费用（5000 lamports）
@@ -122,7 +125,7 @@ public class SolanaTransactionService {
      */
     public boolean isValidWalletAddress(String walletAddress) {
         try {
-            PublicKey.fromBase58(walletAddress);
+            new PublicKey(walletAddress);
             return true;
         } catch (Exception e) {
             log.warn("无效的钱包地址: {}", walletAddress);
@@ -137,7 +140,7 @@ public class SolanaTransactionService {
      */
     public boolean isValidTokenAddress(String tokenAddress) {
         try {
-            PublicKey.fromBase58(tokenAddress);
+            new PublicKey(tokenAddress);
             return true;
         } catch (Exception e) {
             log.warn("无效的代币地址: {}", tokenAddress);
@@ -154,10 +157,10 @@ public class SolanaTransactionService {
     public CompletableFuture<AccountInfo> getAccountInfo(String address, boolean useMainnet) {
         return CompletableFuture.supplyAsync(() -> {
             try {
-                SolanaRpcClient rpcClient = useMainnet ? mainnetRpcClient : devnetRpcClient;
-                PublicKey publicKey = PublicKey.fromBase58(address);
+                RpcClient rpcClient = useMainnet ? mainnetRpcClient : devnetRpcClient;
+                PublicKey publicKey = new PublicKey(address);
                 
-                return rpcClient.getAccountInfo(publicKey).join();
+                return rpcClient.getApi().getAccountInfo(publicKey);
                 
             } catch (Exception e) {
                 log.error("获取账户信息失败，地址: {}", address, e);
@@ -186,9 +189,8 @@ public class SolanaTransactionService {
     public CompletableFuture<String> getLatestBlockhash(boolean useMainnet) {
         return CompletableFuture.supplyAsync(() -> {
             try {
-                SolanaRpcClient rpcClient = useMainnet ? mainnetRpcClient : devnetRpcClient;
-                LatestBlockhash latestBlockhash = rpcClient.getLatestBlockhash().join();
-                return latestBlockhash.blockhash();
+                RpcClient rpcClient = useMainnet ? mainnetRpcClient : devnetRpcClient;
+                return rpcClient.getApi().getLatestBlockhash();
                 
             } catch (Exception e) {
                 log.error("获取最新区块哈希失败", e);
@@ -198,12 +200,25 @@ public class SolanaTransactionService {
     }
 
     /**
-     * 创建基础指令构建器
+     * 创建交易指令
      * @param programId 程序ID
-     * @return 指令构建器
+     * @param keys 账户元数据列表
+     * @param data 指令数据
+     * @return 交易指令
      */
-    public Instruction.Builder createInstructionBuilder(PublicKey programId) {
-        return Instruction.builder().program(programId);
+    public TransactionInstruction createInstruction(PublicKey programId, List<org.p2p.solanaj.core.AccountMeta> keys, byte[] data) {
+        return new TransactionInstruction(programId, keys, data);
+    }
+
+    /**
+     * 创建账户元数据
+     * @param publicKey 公钥
+     * @param isSigner 是否签名者
+     * @param isWritable 是否可写
+     * @return 账户元数据
+     */
+    public org.p2p.solanaj.core.AccountMeta createAccountMeta(PublicKey publicKey, boolean isSigner, boolean isWritable) {
+        return new org.p2p.solanaj.core.AccountMeta(publicKey, isSigner, isWritable);
     }
 
     /**
